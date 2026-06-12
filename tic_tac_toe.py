@@ -38,22 +38,50 @@ def _new_board():
     return [[" " for _ in range(3)] for _ in range(3)]
 
 
-def _print_board(board):
+def format_board(board):
+    rows = []
     for index, row in enumerate(board):
-        print(" | ".join(row))
+        rows.append(" | ".join(row))
         if index < 2:
-            print("--+---+--")
+            rows.append("--+---+--")
+    return "\n".join(rows)
+
+
+def parse_move(text):
+    parts = text.replace(",", " ").split()
+    if len(parts) != 2:
+        raise ValueError("enter row and column as two numbers from 0 to 2")
+
+    try:
+        row, col = (int(part) for part in parts)
+    except ValueError as error:
+        raise ValueError("enter row and column as two numbers from 0 to 2") from error
+
+    if row not in range(3) or col not in range(3):
+        raise ValueError("row and col must be between 0 and 2")
+
+    return row, col
+
+
+def next_player(player):
+    return "O" if player == "X" else "X"
+
+
+def _print_board(board):
+    print(format_board(board))
 
 
 def main():
     board = _new_board()
     player = "X"
 
+    print("Tic-tac-toe")
+    print("Enter moves as: row col, using numbers 0 through 2.")
+
     while True:
         _print_board(board)
         try:
-            row = int(input(f"Player {player}, enter row (0-2): "))
-            col = int(input(f"Player {player}, enter column (0-2): "))
+            row, col = parse_move(input(f"Player {player}, enter move: "))
             make_move(board, row, col, player)
         except ValueError as error:
             print(error)
@@ -68,7 +96,7 @@ def main():
                 print(f"Player {result} wins!")
             break
 
-        player = "O" if player == "X" else "X"
+        player = next_player(player)
 
 
 if __name__ == "__main__":
