@@ -292,3 +292,84 @@ def test_grouped_mixed_sources_aggregated_at_top_level():
     assert result["sources"] == ["sys-1", "sys-2"]
     assert result["groups"]["a"]["sources"] == ["sys-1"]
     assert result["groups"]["b"]["sources"] == ["sys-2"]
+
+
+# ---------------------------------------------------------------------------
+# Numeric edge cases
+# ---------------------------------------------------------------------------
+
+def test_skips_nan_and_infinite_values():
+    records = [
+        {"value": float("nan")},
+        {"value": float("inf")},
+        {"value": float("-inf")},
+        {"value": "NaN"},
+        {"value": "Infinity"},
+        {"value": "-Infinity"},
+        {"value": 5},
+    ]
+    result = process_data(records)
+    assert result == {
+        "count": 1,
+        "mean": 5.0,
+        "min": 5.0,
+        "max": 5.0,
+        "skipped": 6,
+    }
+
+
+def test_skips_boolean_values():
+    records = [{"value": True}, {"value": False}, {"value": 2}]
+    result = process_data(records)
+    assert result == {
+        "count": 1,
+        "mean": 2.0,
+        "min": 2.0,
+        "max": 2.0,
+        "skipped": 2,
+    }
+
+
+def test_zero_and_negative_values_remain_valid():
+    records = [{"value": 0}, {"value": -10}, {"value": "-5"}]
+    result = process_data(records)
+    assert result == {
+        "count": 3,
+        "mean": -5.0,
+        "min": -10.0,
+        "max": 0.0,
+        "skipped": 0,
+    }
+
+
+def test_ungrouped_numeric_validation_does_not_add_fields():
+    records = [
+        {"value": 0, "category": "ops", "source_id": "sys-1"},
+        {"value": True, "category": "ops", "source_id": "sys-2"},
+        {"value": float("inf"), "category": "sales", "source_id": "sys-3"},
+    ]
+    result = process_data(records)
+    assert set(result) == {"count", "mean", "min", "max", "skipped"}
+    assert result["count"] == 1
+    assert result["mean"] == 0.0
+    assert result["skipped"] == 2
+
+
+def test_grouped_numeric_validation_preserves_output_shape():
+    records = [
+        {"value": 0, "category": "ops", "source_id": "sys-1"},
+        {"value": -4, "category": "ops", "source_id": "sys-2"},
+        {"value": float("nan"), "category": "ops", "source_id": "sys-3"},
+        {"value": "Infinity", "category": "sales", "source_id": "sys-4"},
+        {"value": True, "category": "sales", "source_id": "sys-5"},
+    ]
+    result = process_data(records, group_by_category=True)
+    assert set(result) == {"groups", "skipped", "sources"}
+    assert set(result["groups"]) == {"ops"}
+    assert result["groups"]["ops"]["count"] == 2
+    assert result["groups"]["ops"]["mean"] == -2.0
+    assert result["groups"]["ops"]["min"] == -4.0
+    assert result["groups"]["ops"]["max"] == 0.0
+    assert result["groups"]["ops"]["sources"] == ["sys-1", "sys-2"]
+    assert result["sources"] == ["sys-1", "sys-2"]
+    assert result["skipped"] == 3
