@@ -1,4 +1,5 @@
 import logging
+import math
 import sys
 from collections import defaultdict
 from datetime import datetime
@@ -65,10 +66,20 @@ def process_data(
             continue
 
         raw_value = record.get("value")
+        if isinstance(raw_value, bool):
+            logger.warning("Record %d has invalid value %r, skipping", i, raw_value)
+            skipped += 1
+            continue
+
         try:
             value = float(raw_value)  # type: ignore[arg-type]
         except (TypeError, ValueError):
             logger.warning("Record %d has invalid value %r, skipping", i, raw_value)
+            skipped += 1
+            continue
+
+        if not math.isfinite(value):
+            logger.warning("Record %d has non-finite value %r, skipping", i, raw_value)
             skipped += 1
             continue
 
