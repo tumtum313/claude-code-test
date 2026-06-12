@@ -219,6 +219,29 @@ def test_category_whitespace_is_stripped():
     assert result["groups"]["sales"]["count"] == 2
 
 
+def test_grouped_category_edge_cases_normalize_to_expected_groups():
+    records = [
+        {"value": 10, "source_id": "missing-cat"},
+        {"value": 20, "category": "", "source_id": "empty-cat"},
+        {"value": 30, "category": "   ", "source_id": "blank-cat"},
+        {"value": 40, "category": "  sales  ", "source_id": "sales-a"},
+        {"value": 50, "category": "sales", "source_id": "sales-b"},
+    ]
+    result = process_data(records, group_by_category=True)
+    assert set(result["groups"]) == {"sales", "uncategorized"}
+    assert result["groups"]["uncategorized"]["count"] == 3
+    assert result["groups"]["uncategorized"]["mean"] == 20.0
+    assert result["groups"]["uncategorized"]["sources"] == [
+        "blank-cat",
+        "empty-cat",
+        "missing-cat",
+    ]
+    assert result["groups"]["sales"]["count"] == 2
+    assert result["groups"]["sales"]["mean"] == 45.0
+    assert result["groups"]["sales"]["sources"] == ["sales-a", "sales-b"]
+    assert result["skipped"] == 0
+
+
 # ---------------------------------------------------------------------------
 # Timestamp validation — obviously malformed values discard field, keep record
 # ---------------------------------------------------------------------------
