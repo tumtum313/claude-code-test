@@ -45,9 +45,12 @@ app.log         # Runtime log output (created on first run)
 
 ## API
 
-### `process_data(records)`
+### `process_data(records, group_by_category=False)`
 
-Accepts a list of dicts, each with a numeric `"value"` key. Returns a summary dict:
+Accepts a list of dicts, each with a numeric `"value"` key. Values may be
+numbers or numeric strings. Invalid records are skipped and logged.
+
+By default, returns an ungrouped summary dict:
 
 | Key       | Type           | Description                        |
 |-----------|----------------|------------------------------------|
@@ -57,4 +60,21 @@ Accepts a list of dicts, each with a numeric `"value"` key. Returns a summary di
 | `max`     | `float\|None`  | Maximum valid value                |
 | `skipped` | `int`          | Number of invalid/skipped records  |
 
-Records missing `"value"`, with non-numeric values, or that are not dicts are skipped and logged as warnings.
+When `group_by_category=True`, returns:
+
+| Key       | Type   | Description                                  |
+|-----------|--------|----------------------------------------------|
+| `groups`  | `dict` | Per-category summary stats and source IDs    |
+| `skipped` | `int`  | Number of invalid/skipped records            |
+| `sources` | `list` | Sorted unique non-empty source IDs observed  |
+
+Optional record fields:
+
+| Field       | Type  | Behavior                                           |
+|-------------|-------|----------------------------------------------------|
+| `category`  | `str` | Used for grouped output; blank or invalid values fall back to `uncategorized` |
+| `timestamp` | `str` | Validated as ISO 8601 when present; malformed timestamps are logged but do not skip the record |
+| `source_id` | `any` | Converted to a trimmed string and included in grouped source lists when non-empty |
+
+Records missing `"value"`, with non-numeric values, or that are not dicts are
+skipped and logged as warnings.
