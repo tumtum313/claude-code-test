@@ -1,4 +1,4 @@
-# claude-code-test
+# claude-code
 
 A production-ready Python data processing application.
 
